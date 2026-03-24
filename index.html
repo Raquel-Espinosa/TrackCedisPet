@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TrackCedisPet — Control de Operadores</title>
+  <title>TrackDelivery — Control de Operadores</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
@@ -367,7 +367,7 @@
   <header>
     <div>
       <div class="logo-label">Sistema de Control</div>
-      <div class="logo-title">TRACK<span>DELIVERY</span></div>
+      <div class="logo-title">TRACK<span>CedisPet</span></div>
     </div>
     <div class="status-dot" title="Sistema activo"></div>
   </header>
@@ -725,6 +725,18 @@ async function saveEventToSheets(idx) {
     await uploadPhoto();
   }
 
+  // Calcular tiempos AQUÍ para el evento 3, antes de armar el payload
+  // (onComplete() se llama después, por eso session.totalMin aún era 0)
+  let totalMin = '', descargaMin = '';
+  if (idx === 3) {
+    const evs = session.events;
+    totalMin    = String(Math.round((evs[3].time - evs[0].time) / 60000));
+    descargaMin = String(Math.round((evs[2].time - evs[1].time) / 60000));
+    // Actualizar session para que onComplete() muestre los mismos valores
+    session.totalMin    = parseInt(totalMin);
+    session.descargaMin = parseInt(descargaMin);
+  }
+
   const payload = {
     action:       'saveEvent',
     phone:        session.phone,
@@ -738,8 +750,8 @@ async function saveEventToSheets(idx) {
     mapsUrl:      ev.mapsUrl || '',
     observations: obs,
     photoUrl:     session.photoDriveUrl || '',
-    totalMin:     idx === 3 ? String(session.totalMin)    : '',
-    descargaMin:  idx === 3 ? String(session.descargaMin) : ''
+    totalMin:     totalMin,
+    descargaMin:  descargaMin
   };
 
   // Google Apps Script requiere text/plain para evitar preflight CORS
