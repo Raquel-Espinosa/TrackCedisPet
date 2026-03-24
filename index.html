@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TrackDelivery — Control de Operadores</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0e1a;
+      --surface: #111827;
+      --surface2: #1a2236;
+      --border: #1e2d45;
+      --accent: #f97316;
+      --accent2: #0ea5e9;
+      --success: #22c55e;
+      --warning: #eab308;
+      --danger: #ef4444;
+      --text: #e2e8f0;
+      --text-muted: #64748b;
+      --text-dim: #334155;
+      --mono: 'Space Mono', monospace;
+      --display: 'Barlow Condensed', sans-serif;
+      --body: 'Barlow', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(249,115,22,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(249,115,22,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .app-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 16px 80px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 24px;
+    }
+    .logo-label {
+      font-family: var(--mono);
+      font-size: 9px;
+      letter-spacing: .2em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+    .logo-title {
+      font-family: var(--display);
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      color: var(--text);
+      line-height: 1;
+    }
+    .logo-title span { color: var(--accent); }
+    .status-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 8px var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .6; transform: scale(1.4); }
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-family: var(--display);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .18em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-title::before {
+      content: '';
+      width: 3px; height: 14px;
+      background: var(--accent);
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    label {
+      display: block;
+      font-size: 11px;
+      font-family: var(--mono);
+      letter-spacing: .1em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    input[type="text"], input[type="tel"], input[type="number"], textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 15px;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      -webkit-appearance: none;
+    }
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(249,115,22,.12);
+    }
+    input::placeholder, textarea::placeholder { color: var(--text-dim); }
+    textarea { resize: vertical; min-height: 72px; font-size: 13px; }
+    .input-hint { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+    .field-group { margin-bottom: 14px; }
+    .field-group:last-child { margin-bottom: 0; }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 14px 18px;
+      border-radius: 10px;
+      border: none;
+      font-family: var(--display);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: transform .15s, opacity .15s, box-shadow .2s;
+      text-transform: uppercase;
+      position: relative;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn:disabled { opacity: .38; cursor: not-allowed; transform: none !important; }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(249,115,22,.25);
+    }
+    .btn-primary:hover:not(:disabled) { box-shadow: 0 6px 28px rgba(249,115,22,.4); }
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-event {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      color: var(--text);
+      justify-content: flex-start;
+      padding: 15px 16px;
+      margin-bottom: 10px;
+      text-align: left;
+      font-size: 15px;
+    }
+    .btn-event .ev-icon { font-size: 22px; flex-shrink: 0; }
+    .btn-event .ev-text { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+    .btn-event .ev-name { font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .btn-event .ev-sub  { font-family: var(--mono); font-size: 10px; color: var(--text-muted); text-transform: none; font-weight: 400; letter-spacing: 0; }
+    .btn-event.active   { border-color: var(--success); background: rgba(34,197,94,.06); }
+    .btn-event.active .ev-name { color: var(--success); }
+    .btn-event.next-up  { border-color: var(--accent); animation: borderGlow 1.5s infinite; }
+    @keyframes borderGlow {
+      0%,100% { box-shadow: none; }
+      50%      { box-shadow: 0 0 14px rgba(249,115,22,.25); }
+    }
+    .checkmark {
+      margin-left: auto;
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      background: var(--success);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+      color: #fff;
+      font-family: var(--mono);
+    }
+    .btn-whatsapp {
+      background: #25d366;
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(37,211,102,.25);
+    }
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .progress-bar {
+      height: 5px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 18px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 4px;
+      transition: width .5s cubic-bezier(.4,0,.2,1);
+    }
+    .timestamp-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+    }
+    .timestamp-row:last-child { border-bottom: none; }
+    .ts-label { color: var(--text-muted); font-family: var(--mono); font-size: 11px; }
+    .ts-event-name { font-family: var(--body); font-size: 13px; color: var(--text); font-weight: 500; margin-bottom: 2px; }
+    .ts-coords { font-size: 10px; color: var(--accent2); }
+    .ts-value { font-family: var(--mono); color: var(--text); font-size: 12px; text-align: right; white-space: nowrap; }
+    .times-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .time-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 10px;
+      text-align: center;
+    }
+    .time-box .t-label { font-family: var(--mono); font-size: 9px; color: var(--text-muted); margin-bottom: 6px; letter-spacing: .08em; }
+    .time-box .t-value { font-family: var(--display); font-size: 32px; font-weight: 800; color: var(--accent); line-height: 1; }
+    .time-box .t-unit  { font-family: var(--mono); font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+    .photo-preview {
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 10px;
+      display: none;
+      border: 1px solid var(--border);
+      max-height: 220px;
+      object-fit: cover;
+    }
+    .photo-preview.visible { display: block; }
+    .gps-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+    }
+    .gps-badge.active { border-color: var(--success); color: var(--success); }
+    .gps-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 12px 20px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      z-index: 9999;
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+      max-width: 90vw;
+      white-space: pre-line;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #toast.success { border-left-color: var(--success); }
+    #toast.error   { border-left-color: var(--danger); }
+    .hidden { display: none !important; }
+    .divider {
+      text-align: center;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: .15em;
+      color: var(--text-dim);
+      margin: 20px 0;
+      position: relative;
+    }
+    .divider::before, .divider::after {
+      content: '';
+      position: absolute;
+      top: 50%; width: calc(50% - 60px);
+      height: 1px; background: var(--border);
+    }
+    .divider::before { left: 0; }
+    .divider::after  { right: 0; }
+    .step-pills { display: flex; gap: 6px; margin-bottom: 22px; }
+    .pill { flex: 1; height: 4px; border-radius: 4px; background: var(--border); transition: background .3s; }
+    .pill.active { background: var(--accent); }
+    .pill.done   { background: var(--success); }
+    .session-bar {
+      display: flex;
+      gap: 0;
+      align-items: stretch;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 14px;
+    }
+    .session-cell {
+      flex: 1;
+      padding: 12px 16px;
+    }
+    .session-cell + .session-cell {
+      border-left: 1px solid var(--border);
+    }
+    .session-cell .sc-label { font-family: var(--mono); font-size: 9px; letter-spacing: .1em; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; }
+    .session-cell .sc-value { font-family: var(--display); font-size: 20px; font-weight: 800; }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (max-width: 360px) {
+      .app-wrap { padding: 10px 10px 70px; }
+      .logo-title { font-size: 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-wrap">
+
+  <header>
+    <div>
+      <div class="logo-label">Sistema de Control</div>
+      <div class="logo-title">TRACK<span>CEDISPET</span></div>
+    </div>
+    <div class="status-dot" title="Sistema activo"></div>
+  </header>
+
+  <div class="step-pills">
+    <div class="pill active" id="pill-0"></div>
+    <div class="pill" id="pill-1"></div>
+    <div class="pill" id="pill-2"></div>
+  </div>
+
+  <!-- ══ PASO 1: REGISTRO ══ -->
+  <div id="step-register">
+    <div class="card">
+      <div class="card-title">Identificación del Operador</div>
+      <div class="field-group">
+        <label for="phone">NÚMERO DE TELÉFONO</label>
+        <input type="tel" id="phone" placeholder="10 dígitos" maxlength="10" inputmode="numeric" autocomplete="tel" />
+      </div>
+      <div class="field-group">
+        <label for="store">NÚMERO DE TIENDA</label>
+        <input type="number" id="store" placeholder="7101 – 7801" min="7101" max="7801" inputmode="numeric" />
+        <p class="input-hint">Rango válido: 7101 a 7801</p>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="startSession()">
+      Iniciar Sesión &nbsp;→
+    </button>
+  </div>
+
+  <!-- ══ PASO 2: EVENTOS ══ -->
+  <div id="step-events" class="hidden">
+
+    <div class="session-bar">
+      <div class="session-cell">
+        <div class="sc-label">Operador</div>
+        <div class="sc-value" id="display-phone">—</div>
+      </div>
+      <div class="session-cell">
+        <div class="sc-label">Tienda</div>
+        <div class="sc-value" id="display-store" style="color:var(--accent)">—</div>
+      </div>
+    </div>
+
+    <div class="gps-badge" id="gps-badge">
+      <div class="gps-dot"></div>
+      <span>Obteniendo GPS…</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Progreso de Eventos</div>
+      <div class="progress-header">
+        <span id="prog-label">0 / 4 eventos</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+
+      <button class="btn btn-event next-up" id="btn-ev-0" onclick="registerEvent(0)">
+        <span class="ev-icon">🏪</span>
+        <span class="ev-text">
+          <span class="ev-name">Llegada a Tienda</span>
+          <span class="ev-sub" id="ts-0">Pendiente — toca para registrar</span>
+        </span>
+      </button>
+      <button class="btn btn-event" id="btn-ev-1" onclick="registerEvent(1)" disabled>
+        <span class="ev-icon">📦</span>
+        <span class="ev-text">
+          <span class="ev-name">Inicio de Descarga</span>
+          <span class="ev-sub" id="ts-1">Pendiente</span>
+        </span>
+      </button>
+      <button class="btn btn-event" id="btn-ev-2" onclick="registerEvent(2)" disabled>
+        <span class="ev-icon">✅</span>
+        <span class="ev-text">
+          <span class="ev-name">Término de Descarga</span>
+          <span class="ev-sub" id="ts-2">Pendiente</span>
+        </span>
+      </button>
+      <button class="btn btn-event" id="btn-ev-3" onclick="registerEvent(3)" disabled>
+        <span class="ev-icon">🚚</span>
+        <span class="ev-text">
+          <span class="ev-name">Salida de Tienda</span>
+          <span class="ev-sub" id="ts-3">Pendiente</span>
+        </span>
+      </button>
+    </div>
+
+    <!-- Información adicional -->
+    <div class="card">
+      <div class="card-title">Información Adicional</div>
+      <div class="field-group">
+        <label for="obs">OBSERVACIONES / COMENTARIOS</label>
+        <textarea id="obs" placeholder="Notas del operador, incidencias, condiciones de entrega…"></textarea>
+      </div>
+      <div class="field-group">
+        <label>FOTOGRAFÍA</label>
+        <button class="btn btn-secondary" onclick="document.getElementById('photo-input').click()" style="font-size:14px">
+          📷 &nbsp;Tomar / Seleccionar Foto
+        </button>
+        <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event)" />
+        <img id="photo-preview" class="photo-preview" alt="Vista previa de foto" />
+        <p class="input-hint" id="photo-status">Sin fotografía adjunta</p>
+      </div>
+    </div>
+
+    <!-- Registro de tiempos -->
+    <div class="card hidden" id="card-timestamps">
+      <div class="card-title">Registro de Eventos</div>
+      <div id="timestamps-detail"></div>
+    </div>
+
+    <!-- Tiempos calculados -->
+    <div class="card hidden" id="card-tiempos">
+      <div class="card-title">Tiempos Calculados</div>
+      <div class="times-grid">
+        <div class="time-box">
+          <div class="t-label">TIEMPO EN TIENDA</div>
+          <div class="t-value" id="t-total">—</div>
+          <div class="t-unit">minutos</div>
+        </div>
+        <div class="time-box">
+          <div class="t-label">TIEMPO DE DESCARGA</div>
+          <div class="t-value" id="t-descarga">—</div>
+          <div class="t-unit">minutos</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WhatsApp + nueva sesión -->
+    <div class="hidden" id="wrap-actions">
+      <div class="divider">FLUJO COMPLETADO</div>
+      <button class="btn btn-whatsapp" onclick="sendWhatsApp()" style="margin-bottom:10px">
+        💬 &nbsp;Enviar Resumen por WhatsApp
+      </button>
+      <button class="btn btn-secondary" onclick="newSession()">
+        ↩ &nbsp;Nueva Sesión
+      </button>
+    </div>
+
+  </div>
+
+</div><!-- /app-wrap -->
+
+<div id="toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════════
+   CONFIG — actualiza APPS_SCRIPT_URL con tu URL
+   de Google Apps Script desplegado como Web App
+═══════════════════════════════════════════════ */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxe7cQvVGmidmHTGfJAfFn3_T12sxhnB5NUrYQbI0eQMKAOxo1gD9z7NdBa5fhatfOnlw/exec';
+const WHATSAPP_NUMBER  = '525550504444';
+
+const EVENT_NAMES = [
+  'Llegada a Tienda',
+  'Inicio de Descarga',
+  'Término de Descarga',
+  'Salida de Tienda'
+];
+
+/* ══ STATE ══ */
+let session = {
+  phone: '', store: '',
+  events: [null, null, null, null],
+  photoFile: null,
+  photoDriveUrl: '',
+  totalMin: 0,
+  descargaMin: 0
+};
+let gpsCoords   = null;
+let gpsWatchId  = null;
+
+/* ══ TOAST ══ */
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 3400);
+}
+
+/* ══ GPS ══ */
+function updateGPSBadge() {
+  const badge = document.getElementById('gps-badge');
+  if (gpsCoords) {
+    badge.querySelector('span').textContent =
+      `GPS: ${gpsCoords.lat.toFixed(5)}, ${gpsCoords.lng.toFixed(5)}`;
+    badge.className = 'gps-badge active';
+  }
+}
+
+function startGPS() {
+  const badge = document.getElementById('gps-badge');
+  if (!navigator.geolocation) {
+    badge.querySelector('span').textContent = 'GPS no disponible';
+    return;
+  }
+  // Primera lectura inmediata (getCurrentPosition para no esperar al watch)
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      gpsCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      updateGPSBadge();
+    },
+    () => {},
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+  // Actualización continua
+  gpsWatchId = navigator.geolocation.watchPosition(
+    pos => {
+      gpsCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      updateGPSBadge();
+    },
+    err => {
+      if (!gpsCoords)
+        badge.querySelector('span').textContent = 'GPS no disponible — activa ubicación';
+    },
+    { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 }
+  );
+}
+
+/* ══ STEP 1 → START SESSION ══ */
+function startSession() {
+  const phone = document.getElementById('phone').value.trim();
+  const store = parseInt(document.getElementById('store').value, 10);
+
+  if (!/^\d{10}$/.test(phone)) {
+    toast('Ingresa un número de teléfono de 10 dígitos', 'error'); return;
+  }
+  if (!store || store < 7101 || store > 7801) {
+    toast('Número de tienda inválido (debe ser entre 7101 y 7801)', 'error'); return;
+  }
+
+  session.phone = phone;
+  session.store = store;
+  // Guardar teléfono en localStorage para no volver a capturarlo
+  try { localStorage.setItem('td_phone', phone); } catch(e) {}
+  document.getElementById('display-phone').textContent = phone;
+  document.getElementById('display-store').textContent = store;
+
+  showStep('events');
+  startGPS();
+  setPills(1);
+  toast('Sesión iniciada. Registra los eventos en orden.', 'success');
+}
+
+/* ══ REGISTER EVENT ══ */
+function registerEvent(idx) {
+  const btn = document.getElementById(`btn-ev-${idx}`);
+  btn.disabled = true;
+  btn.classList.remove('next-up');
+
+  const now   = new Date();
+  const pad   = n => String(n).padStart(2, '0');
+  const fecha = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const hora  = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const timeStr = `${fecha}  ${hora}`;
+
+  // GPS snapshot en el momento exacto del evento
+  const lat     = (gpsCoords && gpsCoords.lat != null) ? parseFloat(gpsCoords.lat.toFixed(6)) : null;
+  const lng     = (gpsCoords && gpsCoords.lng != null) ? parseFloat(gpsCoords.lng.toFixed(6)) : null;
+  const mapsUrl = (lat !== null && lng !== null) ? `https://maps.google.com/?q=${lat},${lng}` : '';
+
+  session.events[idx] = { time: now, timeStr, fecha, hora, lat, lng, mapsUrl };
+
+  // Update button
+  btn.classList.add('active');
+  document.getElementById(`ts-${idx}`).textContent = timeStr;
+  btn.insertAdjacentHTML('beforeend', '<div class="checkmark">✓</div>');
+
+  // Enable next
+  if (idx < 3) {
+    const next = document.getElementById(`btn-ev-${idx+1}`);
+    next.disabled = false;
+    next.classList.add('next-up');
+    document.getElementById(`ts-${idx+1}`).textContent = 'Toca para registrar';
+  }
+
+  // Progress
+  const done = session.events.filter(Boolean).length;
+  const pct  = Math.round(done / 4 * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `${done} / 4 eventos`;
+  document.getElementById('prog-pct').textContent   = pct + '%';
+
+  // Timestamps card
+  document.getElementById('card-timestamps').classList.remove('hidden');
+  renderTimestamps();
+
+  // Save async (fire & forget)
+  saveEventToSheets(idx);
+
+  toast(`✓ ${EVENT_NAMES[idx]} registrado`);
+
+  if (done === 4) onComplete();
+}
+
+function renderTimestamps() {
+  const c = document.getElementById('timestamps-detail');
+  c.innerHTML = '';
+  session.events.forEach((ev, i) => {
+    if (!ev) return;
+    const row = document.createElement('div');
+    row.className = 'timestamp-row';
+    row.innerHTML = `
+      <div>
+        <div class="ts-event-name">${EVENT_NAMES[i]}</div>
+        ${ev.mapsUrl
+          ? `<a class="ts-coords" href="${ev.mapsUrl}" target="_blank" rel="noopener">📍 Ver en Google Maps</a>`
+          : `<span class="ts-coords" style="color:var(--text-dim)">Sin GPS</span>`}
+      </div>
+      <div class="ts-value">${ev.timeStr}</div>
+    `;
+    c.appendChild(row);
+  });
+}
+
+function onComplete() {
+  const ev = session.events;
+  session.totalMin    = Math.round((ev[3].time - ev[0].time) / 60000);
+  session.descargaMin = Math.round((ev[2].time - ev[1].time) / 60000);
+
+  document.getElementById('t-total').textContent    = session.totalMin;
+  document.getElementById('t-descarga').textContent = session.descargaMin;
+  document.getElementById('card-tiempos').classList.remove('hidden');
+  document.getElementById('wrap-actions').classList.remove('hidden');
+
+  setPills(2);
+  toast('🎉 Flujo completado. ¡Envía el resumen por WhatsApp!', 'success');
+}
+
+/* ══ PHOTO ══ */
+function handlePhoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  session.photoFile = file;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const img = document.getElementById('photo-preview');
+    img.src = ev.target.result;
+    img.classList.add('visible');
+    document.getElementById('photo-status').textContent = `📷 ${file.name}`;
+  };
+  reader.readAsDataURL(file);
+  toast('Foto adjuntada correctamente', 'success');
+}
+
+/* ══ SAVE TO SHEETS ══ */
+async function saveEventToSheets(idx) {
+  const ev  = session.events[idx];
+  const obs = document.getElementById('obs').value.trim();
+
+  // Upload photo on last event
+  if (idx === 3 && session.photoFile && !session.photoDriveUrl) {
+    await uploadPhoto();
+  }
+
+  const payload = {
+    action:       'saveEvent',
+    phone:        session.phone,
+    store:        session.store,
+    event:        EVENT_NAMES[idx],
+    eventIdx:     idx,
+    fecha:        ev.fecha  || '',
+    hora:         ev.hora   || '',
+    lat:          (ev.lat  !== null && ev.lat  !== undefined) ? ev.lat  : '',
+    lng:          (ev.lng  !== null && ev.lng  !== undefined) ? ev.lng  : '',
+    mapsUrl:      ev.mapsUrl || '',
+    observations: obs,
+    photoUrl:     session.photoDriveUrl || '',
+    totalMin:     idx === 3 ? session.totalMin    : '',
+    descargaMin:  idx === 3 ? session.descargaMin : ''
+  };
+
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode:   'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload)
+    });
+  } catch(err) {
+    console.warn('Sheets error:', err);
+  }
+}
+
+async function uploadPhoto() {
+  if (!session.photoFile) return;
+  const base64 = await fileToBase64(session.photoFile);
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL, {
+      method:  'POST',
+      mode:    'no-cors',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        action:   'uploadPhoto',
+        fileName: `${session.phone}_${session.store}_${Date.now()}.jpg`,
+        base64,
+        mimeType: session.photoFile.type || 'image/jpeg'
+      })
+    });
+    // Note: no-cors returns opaque response, URL returned via second mechanism
+  } catch(err) {
+    console.warn('Photo upload error:', err);
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = e => res(e.target.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+/* ══ WHATSAPP ══ */
+function sendWhatsApp() {
+  const ev  = session.events;
+  const obs = document.getElementById('obs').value.trim();
+
+  const lines = [
+    `🚚 *REPORTE DE ENTREGA*`,
+    ``,
+    `📞 Operador: ${session.phone}`,
+    `🏪 Tienda: ${session.store}`,
+    ``,
+    `⏱ *REGISTRO DE EVENTOS*`,
+    `🟢 Llegada a tienda:    ${ev[0]?.timeStr || '—'}`,
+    `📦 Inicio de descarga:  ${ev[1]?.timeStr || '—'}`,
+    `✅ Término de descarga: ${ev[2]?.timeStr || '—'}`,
+    `🔴 Salida de tienda:    ${ev[3]?.timeStr || '—'}`,
+    ``,
+    `📊 *TIEMPOS CALCULADOS*`,
+    `⏳ Tiempo total en tienda: ${session.totalMin} min`,
+    `⏳ Tiempo de descarga:     ${session.descargaMin} min`,
+  ];
+  if (obs) lines.push(``, `📝 Observaciones: ${obs}`);
+  if (ev[0]?.mapsUrl) lines.push(``, `📍 Ubicación llegada: ${ev[0].mapsUrl}`);
+  if (ev[3]?.mapsUrl) lines.push(`📍 Ubicación salida: ${ev[3].mapsUrl}`);
+  if (session.photoDriveUrl) lines.push(`📷 Fotografía: ${session.photoDriveUrl}`);
+
+  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(lines.join('\n'))}`;
+  window.open(url, '_blank');
+}
+
+/* ══ INIT — cargar teléfono guardado ══ */
+(function initSavedPhone() {
+  try {
+    const saved = localStorage.getItem('td_phone');
+    if (saved) {
+      document.getElementById('phone').value = saved;
+      // Mostrar badge de que ya está guardado
+      const hint = document.querySelector('#step-register .input-hint') ||
+                   document.getElementById('phone').parentElement;
+      const badge = document.createElement('p');
+      badge.id = 'phone-saved-badge';
+      badge.style.cssText = 'font-size:11px;color:var(--success);margin-top:5px;font-family:var(--mono)';
+      badge.textContent = '✓ Número recordado';
+      document.getElementById('phone').after(badge);
+    }
+  } catch(e) {}
+  // Actualizar badge al escribir
+  document.getElementById('phone').addEventListener('input', function() {
+    const badge = document.getElementById('phone-saved-badge');
+    if (badge) badge.remove();
+  });
+})();
+
+/* ══ NAV HELPERS ══ */
+function showStep(step) {
+  ['register','events'].forEach(s =>
+    document.getElementById(`step-${s}`).classList[s === step ? 'remove' : 'add']('hidden')
+  );
+}
+
+function setPills(active) {
+  for (let i = 0; i < 3; i++) {
+    const p = document.getElementById(`pill-${i}`);
+    p.className = 'pill' + (i < active ? ' done' : i === active ? ' active' : '');
+  }
+}
+
+function newSession() {
+  if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+  session = { phone:'', store:'', events:[null,null,null,null], photoFile:null, photoDriveUrl:'', totalMin:0, descargaMin:0 };
+  gpsCoords = null;
+
+  // No borrar el teléfono — se mantiene guardado para la siguiente sesión
+  document.getElementById('store').value = '';
+  document.getElementById('obs').value   = '';
+  const img = document.getElementById('photo-preview');
+  img.src = ''; img.classList.remove('visible');
+  document.getElementById('photo-status').textContent = 'Sin fotografía adjunta';
+
+  [0,1,2,3].forEach(i => {
+    const btn = document.getElementById(`btn-ev-${i}`);
+    btn.className = 'btn btn-event' + (i === 0 ? ' next-up' : '');
+    btn.disabled  = i !== 0;
+    const chk = btn.querySelector('.checkmark');
+    if (chk) chk.remove();
+    document.getElementById(`ts-${i}`).textContent =
+      i === 0 ? 'Pendiente — toca para registrar' : 'Pendiente';
+  });
+
+  document.getElementById('prog-fill').style.width = '0%';
+  document.getElementById('prog-label').textContent = '0 / 4 eventos';
+  document.getElementById('prog-pct').textContent   = '0%';
+  document.getElementById('card-tiempos').classList.add('hidden');
+  document.getElementById('card-timestamps').classList.add('hidden');
+  document.getElementById('wrap-actions').classList.add('hidden');
+  document.getElementById('gps-badge').className = 'gps-badge';
+  document.getElementById('gps-badge').querySelector('span').textContent = 'Obteniendo GPS…';
+
+  showStep('register');
+  setPills(0);
+}
+</script>
+
+<!-- ══════════════════════════════════════════════════════════════
+  GOOGLE APPS SCRIPT — Code.gs
+  Crea un nuevo proyecto en https://script.google.com
+  Pega este código en Code.gs, despliega como Web App
+  (Ejecutar como: Yo, Quién puede acceder: Cualquier persona)
+  y copia la URL en la variable APPS_SCRIPT_URL de arriba.
+
+─────────────────────────────────────────────
+const SPREADSHEET_ID = '1k-O683Xk5YfYyy_-1ZLSJhFhrx2ztYdHj9CjSmLTNIo';
+const DRIVE_FOLDER_ID = '1ExZNMtLdHCCqZlcQPgK9Rh79Szp6KAmV';
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+
+    if (data.action === 'uploadPhoto') {
+      const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+      const blob = Utilities.newBlob(
+        Utilities.base64Decode(data.base64), data.mimeType, data.fileName
+      );
+      const file = folder.createFile(blob);
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      return ContentService
+        .createTextOutput(JSON.stringify({ url: file.getUrl() }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    if (data.action === 'saveEvent') {
+      const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+      let sheet = ss.getSheetByName('Registros');
+      if (!sheet) {
+        sheet = ss.insertSheet('Registros');
+        sheet.appendRow([
+          'Teléfono','Tienda','Evento','Fecha','Hora',
+          'Latitud','Longitud','Google Maps',
+          'Observaciones','Foto URL',
+          'Tiempo en Tienda (min)','Tiempo Descarga (min)'
+        ]);
+        sheet.getRange(1,1,1,11).setFontWeight('bold').setBackground('#f97316').setFontColor('#fff');
+      }
+      sheet.appendRow([
+        data.phone, data.store, data.event, data.fecha, data.hora,
+        data.lat, data.lng, data.mapsUrl,
+        data.observations, data.photoUrl,
+        data.totalMin || '', data.descargaMin || ''
+      ]);
+      return ContentService
+        .createTextOutput(JSON.stringify({ ok: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    return ContentService.createTextOutput('Unknown action');
+  } catch(err) {
+    return ContentService.createTextOutput('ERROR: ' + err.message);
+  }
+}
+
+function doGet(e) {
+  return ContentService.createTextOutput('TrackDelivery API OK');
+}
+─────────────────────────────────────────────
+══════════════════════════════════════════════════════════════ -->
+
+</body>
+</html>
