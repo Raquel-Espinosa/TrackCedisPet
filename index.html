@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TrackDelivery — Control de Operadores</title>
+  <title>TrackCedisPet — Control de Operadores</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
@@ -367,7 +367,7 @@
   <header>
     <div>
       <div class="logo-label">Sistema de Control</div>
-      <div class="logo-title">TRACK<span>CEDISPET</span></div>
+      <div class="logo-title">TRACK<span>DELIVERY</span></div>
     </div>
     <div class="status-dot" title="Sistema activo"></div>
   </header>
@@ -519,7 +519,7 @@
    CONFIG — actualiza APPS_SCRIPT_URL con tu URL
    de Google Apps Script desplegado como Web App
 ═══════════════════════════════════════════════ */
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxe7cQvVGmidmHTGfJAfFn3_T12sxhnB5NUrYQbI0eQMKAOxo1gD9z7NdBa5fhatfOnlw/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzQBU9mSmrv261aWv956blieHmtCpFdLv6qA5AUl7wZFuulho6epPdnXhqZfezNPEOSKA/exec';
 const WHATSAPP_NUMBER  = '525550504444';
 
 const EVENT_NAMES = [
@@ -720,58 +720,74 @@ async function saveEventToSheets(idx) {
   const ev  = session.events[idx];
   const obs = document.getElementById('obs').value.trim();
 
-  // Upload photo on last event
-  if (idx === 3 && session.photoFile && !session.photoDriveUrl) {
+  // Subir foto si existe y aún no se ha subido
+  if (session.photoFile && !session.photoDriveUrl) {
     await uploadPhoto();
   }
 
   const payload = {
     action:       'saveEvent',
     phone:        session.phone,
-    store:        session.store,
+    store:        String(session.store),
     event:        EVENT_NAMES[idx],
     eventIdx:     idx,
     fecha:        ev.fecha  || '',
     hora:         ev.hora   || '',
-    lat:          (ev.lat  !== null && ev.lat  !== undefined) ? ev.lat  : '',
-    lng:          (ev.lng  !== null && ev.lng  !== undefined) ? ev.lng  : '',
+    lat:          (ev.lat  !== null && ev.lat  !== undefined) ? String(ev.lat)  : '',
+    lng:          (ev.lng  !== null && ev.lng  !== undefined) ? String(ev.lng)  : '',
     mapsUrl:      ev.mapsUrl || '',
     observations: obs,
     photoUrl:     session.photoDriveUrl || '',
-    totalMin:     idx === 3 ? session.totalMin    : '',
-    descargaMin:  idx === 3 ? session.descargaMin : ''
+    totalMin:     idx === 3 ? String(session.totalMin)    : '',
+    descargaMin:  idx === 3 ? String(session.descargaMin) : ''
   };
 
-  try {
-    await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      mode:   'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(payload)
-    });
-  } catch(err) {
-    console.warn('Sheets error:', err);
+  // Google Apps Script requiere text/plain para evitar preflight CORS
+  // El servidor parsea el body como JSON igual
+  let ok = false;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const resp = await fetch(APPS_SCRIPT_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body:    JSON.stringify(payload)
+      });
+      if (resp.ok) { ok = true; break; }
+    } catch(err) {
+      console.warn(`Sheets intento ${attempt}:`, err);
+      if (attempt < 3) await new Promise(r => setTimeout(r, 1500));
+    }
   }
+  if (!ok) toast('⚠ No se pudo guardar en Sheets. Verifica conexión.', 'error');
 }
 
 async function uploadPhoto() {
   if (!session.photoFile) return;
   const base64 = await fileToBase64(session.photoFile);
+  const photoPayload = {
+    action:   'uploadPhoto',
+    fileName: `${session.phone}_${session.store}_${Date.now()}.jpg`,
+    base64,
+    mimeType: session.photoFile.type || 'image/jpeg'
+  };
   try {
+    // text/plain evita preflight; Apps Script parsea el body como JSON
     const resp = await fetch(APPS_SCRIPT_URL, {
       method:  'POST',
-      mode:    'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        action:   'uploadPhoto',
-        fileName: `${session.phone}_${session.store}_${Date.now()}.jpg`,
-        base64,
-        mimeType: session.photoFile.type || 'image/jpeg'
-      })
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body:    JSON.stringify(photoPayload)
     });
-    // Note: no-cors returns opaque response, URL returned via second mechanism
+    const text = await resp.text();
+    // Limpiar posibles backticks de markdown que Apps Script a veces devuelve
+    const clean = text.replace(/```json|```/g, '').trim();
+    const json  = JSON.parse(clean);
+    if (json && json.url) {
+      session.photoDriveUrl = json.url;
+      document.getElementById('photo-status').textContent = '📷 Foto subida ✓';
+    }
   } catch(err) {
     console.warn('Photo upload error:', err);
+    // Si falla la subida de foto, continuamos sin ella para no bloquear el flujo
   }
 }
 
