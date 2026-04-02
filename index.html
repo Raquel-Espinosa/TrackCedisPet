@@ -367,7 +367,7 @@
   <header>
     <div>
       <div class="logo-label">Sistema de Control</div>
-      <div class="logo-title">TRACK<span>CedisPet</span></div>
+      <div class="logo-title">TRACK<span>DELIVERY</span></div>
     </div>
     <div class="status-dot" title="Sistema activo"></div>
   </header>
@@ -520,7 +520,7 @@
    de Google Apps Script desplegado como Web App
 ═══════════════════════════════════════════════ */
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzQBU9mSmrv261aWv956blieHmtCpFdLv6qA5AUl7wZFuulho6epPdnXhqZfezNPEOSKA/exec';
-const WHATSAPP_NUMBER  = '525510248449';
+const WHATSAPP_NUMBER  = '525550504444';
 
 const EVENT_NAMES = [
   'Llegada a Tienda',
@@ -540,6 +540,72 @@ let session = {
 };
 let gpsCoords   = null;
 let gpsWatchId  = null;
+
+/* ══ PERSISTENCIA DE SESIÓN ══ */
+function saveSession() {
+  try {
+    // Guardamos los eventos serializables (sin el objeto Date completo, lo reconstruimos)
+    const toSave = {
+      phone:        session.phone,
+      store:        session.store,
+      photoDriveUrl: session.photoDriveUrl,
+      totalMin:     session.totalMin,
+      descargaMin:  session.descargaMin,
+      obs:          document.getElementById('obs') ? document.getElementById('obs').value : '',
+      events: session.events.map(ev => ev ? {
+        timeStr:  ev.timeStr,
+        fecha:    ev.fecha,
+        hora:     ev.hora,
+        lat:      ev.lat,
+        lng:      ev.lng,
+        mapsUrl:  ev.mapsUrl,
+        timeISO:  ev.time ? ev.time.toISOString() : null
+      } : null)
+    };
+    localStorage.setItem('td_session', JSON.stringify(toSave));
+  } catch(e) { console.warn('saveSession error:', e); }
+}
+
+function clearSession() {
+  try { localStorage.removeItem('td_session'); } catch(e) {}
+}
+
+function loadSession() {
+  try {
+    const raw = localStorage.getItem('td_session');
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    // Verificar que la sesión no sea de otro día (opcional: limpiar al medianoche)
+    const firstEvent = saved.events && saved.events.find(Boolean);
+    if (firstEvent && firstEvent.timeISO) {
+      const savedDate = new Date(firstEvent.timeISO).toDateString();
+      if (savedDate !== new Date().toDateString()) {
+        clearSession();
+        return false;
+      }
+    }
+    // Restaurar session
+    session.phone        = saved.phone        || '';
+    session.store        = saved.store        || '';
+    session.photoDriveUrl= saved.photoDriveUrl|| '';
+    session.totalMin     = saved.totalMin     || 0;
+    session.descargaMin  = saved.descargaMin  || 0;
+    session.events = saved.events.map(ev => ev ? {
+      time:    ev.timeISO ? new Date(ev.timeISO) : new Date(),
+      timeStr: ev.timeStr,
+      fecha:   ev.fecha,
+      hora:    ev.hora,
+      lat:     ev.lat,
+      lng:     ev.lng,
+      mapsUrl: ev.mapsUrl
+    } : null);
+    return true;
+  } catch(e) {
+    console.warn('loadSession error:', e);
+    clearSession();
+    return false;
+  }
+}
 
 /* ══ TOAST ══ */
 function toast(msg, type='') {
@@ -603,8 +669,9 @@ function startSession() {
 
   session.phone = phone;
   session.store = store;
-  // Guardar teléfono en localStorage para no volver a capturarlo
+  // Guardar teléfono permanentemente y sesión activa
   try { localStorage.setItem('td_phone', phone); } catch(e) {}
+  saveSession();
   document.getElementById('display-phone').textContent = phone;
   document.getElementById('display-store').textContent = store;
 
@@ -656,6 +723,9 @@ function registerEvent(idx) {
   // Timestamps card
   document.getElementById('card-timestamps').classList.remove('hidden');
   renderTimestamps();
+
+  // Persistir sesión localmente (sobrevive recarga/cierre)
+  saveSession();
 
   // Save async (fire & forget)
   saveEventToSheets(idx);
@@ -842,15 +912,78 @@ function sendWhatsApp() {
   window.open(url, '_blank');
 }
 
-/* ══ INIT — cargar teléfono guardado ══ */
-(function initSavedPhone() {
+/* ══ INIT — restaurar sesión o cargar teléfono guardado ══ */
+(function initApp() {
+  // Intentar restaurar sesión activa (misma tienda, mismo día)
+  if (loadSession() && session.phone && session.store) {
+    // Restaurar pantalla de eventos
+    document.getElementById('display-phone').textContent = session.phone;
+    document.getElementById('display-store').textContent = session.store;
+
+    // Restaurar observaciones
+    const savedObs = (() => {
+      try { return JSON.parse(localStorage.getItem('td_session')).obs || ''; } catch(e){ return ''; }
+    })();
+    if (savedObs) document.getElementById('obs').value = savedObs;
+
+    // Restaurar botones de evento
+    let lastDone = -1;
+    session.events.forEach((ev, i) => {
+      if (!ev) return;
+      lastDone = i;
+      const btn = document.getElementById(`btn-ev-${i}`);
+      btn.classList.remove('next-up');
+      btn.classList.add('active');
+      btn.disabled = true;
+      document.getElementById(`ts-${i}`).textContent = ev.timeStr;
+      const chk = btn.querySelector('.checkmark');
+      if (!chk) btn.insertAdjacentHTML('beforeend', '<div class="checkmark">✓</div>');
+    });
+
+    // Habilitar el siguiente botón pendiente
+    const next = lastDone + 1;
+    if (next < 4) {
+      const nextBtn = document.getElementById(`btn-ev-${next}`);
+      nextBtn.disabled = false;
+      nextBtn.classList.add('next-up');
+      document.getElementById(`ts-${next}`).textContent = 'Toca para registrar';
+    }
+
+    // Progreso
+    const done = session.events.filter(Boolean).length;
+    const pct  = Math.round(done / 4 * 100);
+    document.getElementById('prog-fill').style.width = pct + '%';
+    document.getElementById('prog-label').textContent = `${done} / 4 eventos`;
+    document.getElementById('prog-pct').textContent   = pct + '%';
+
+    // Timestamps
+    if (done > 0) {
+      document.getElementById('card-timestamps').classList.remove('hidden');
+      renderTimestamps();
+    }
+
+    // Si ya completó los 4 eventos, mostrar tiempos y botones finales
+    if (done === 4) {
+      document.getElementById('t-total').textContent    = session.totalMin;
+      document.getElementById('t-descarga').textContent = session.descargaMin;
+      document.getElementById('card-tiempos').classList.remove('hidden');
+      document.getElementById('wrap-actions').classList.remove('hidden');
+      setPills(2);
+    } else {
+      setPills(1);
+    }
+
+    showStep('events');
+    startGPS();
+    toast('📋 Sesión restaurada — continúa donde la dejaste', 'success');
+    return;
+  }
+
+  // Sin sesión activa: cargar teléfono guardado en el formulario
   try {
-    const saved = localStorage.getItem('td_phone');
-    if (saved) {
-      document.getElementById('phone').value = saved;
-      // Mostrar badge de que ya está guardado
-      const hint = document.querySelector('#step-register .input-hint') ||
-                   document.getElementById('phone').parentElement;
+    const savedPhone = localStorage.getItem('td_phone');
+    if (savedPhone) {
+      document.getElementById('phone').value = savedPhone;
       const badge = document.createElement('p');
       badge.id = 'phone-saved-badge';
       badge.style.cssText = 'font-size:11px;color:var(--success);margin-top:5px;font-family:var(--mono)';
@@ -858,7 +991,7 @@ function sendWhatsApp() {
       document.getElementById('phone').after(badge);
     }
   } catch(e) {}
-  // Actualizar badge al escribir
+
   document.getElementById('phone').addEventListener('input', function() {
     const badge = document.getElementById('phone-saved-badge');
     if (badge) badge.remove();
@@ -881,6 +1014,7 @@ function setPills(active) {
 
 function newSession() {
   if (gpsWatchId) navigator.geolocation.clearWatch(gpsWatchId);
+  clearSession();
   session = { phone:'', store:'', events:[null,null,null,null], photoFile:null, photoDriveUrl:'', totalMin:0, descargaMin:0 };
   gpsCoords = null;
 
